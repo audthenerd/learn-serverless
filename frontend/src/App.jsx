@@ -1,35 +1,99 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect, useRef } from 'react';
+import './App.css';
+import { conversation } from './mock/conversationData';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [messages, setMessages] = useState([]);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const timer = setInterval(() => {
+      setMessages((prev) => {
+        if (prev.length < conversation.length) {
+          return [...prev, conversation[prev.length]];
+        }
+        setIsPlaying(false);
+        return prev;
+      });
+    }, 2500);
+
+    return () => clearInterval(timer);
+  }, [isPlaying]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const resetConversation = () => {
+    setMessages([]);
+    setIsPlaying(true);
+  };
+
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="app-container">
+      <header className="header">
+        <h1>🤖 AI Conversation Simulator</h1>
+        <p className="subtitle">Watch two AI personas discuss ideas</p>
+      </header>
+
+      <div className="personas-bar">
+        <div className="persona alice-persona">
+          <div className="avatar alice-avatar">A</div>
+          <div className="persona-info">
+            <h3>Alice</h3>
+            <p>Creative Problem Solver</p>
+          </div>
+        </div>
+        <div className="vs">VS</div>
+        <div className="persona bob-persona">
+          <div className="avatar bob-avatar">B</div>
+          <div className="persona-info">
+            <h3>Bob</h3>
+            <p>Technical Architect</p>
+          </div>
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+
+      <div className="chat-container">
+        {messages.map((msg, index) => (
+          <div key={index} className={`message ${msg.bot}-message`}>
+            <div className="message-avatar">
+              {msg.bot === 'alice' ? 'A' : 'B'}
+            </div>
+            <div className="message-content">
+              <div className="message-header">
+                {msg.bot === 'alice' ? 'Alice' : 'Bob'}
+              </div>
+              <div className="message-text">{msg.text}</div>
+            </div>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="controls">
+        <button onClick={togglePlayPause} className="control-btn">
+          {isPlaying ? '⏸ Pause' : '▶ Resume'}
         </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
+        <button onClick={resetConversation} className="control-btn reset-btn">
+          🔄 Reset
+        </button>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+
+      <div className="stats">
+        <span>
+          Messages: {messages.length} / {conversation.length}
+        </span>
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
