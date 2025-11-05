@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  backend
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Parameters:
+  AiApiKey:
+    Type: String
+    Description: API key for AI service
+    NoEcho: true
+    Default: aB3dE5fG7hJ9kL2mN4pQ6rS8
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # API Gateway with custom stage name
+  ConversationApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: api
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+  # Get all conversations - returns list of conversation IDs
+  GetConversationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/get-conversations/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: Get all conversation IDs from DynamoDB
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConversationTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ConversationTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ConversationApi
+            Path: /conversations
+            Method: GET
+
+  # Get specific conversation by ID
+  GetConversationByIdFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/get-conversation-by-id/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: Get a specific conversation by ID from DynamoDB
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConversationTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ConversationTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ConversationApi
+            Path: /conversations/{id}
+            Method: GET
+
+  # Generate response for a conversation
+  GenerateResponseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/generate-response/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 256
+      Timeout: 300
+      Description: Generate AI response for conversation
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConversationTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ConversationTable
+          AI_API_KEY: !Ref AiApiKey
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ConversationApi
+            Path: /generateResponse
+            Method: POST
+
+  # Summarize conversation
+  SummarizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/summarize/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 256
+      Timeout: 300
+      Description: Summarize a conversation
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConversationTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ConversationTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ConversationApi
+            Path: /summarize
+            Method: POST
+  # Simple syntax to create a DynamoDB table with a single attribute primary key, more in
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlesssimpletable
+
+  # DynamoDB table to store item: {conversation-id: &lt;ID&gt;, name: &lt;NAME&gt;}
+  ConversationTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: conversation-id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+
+Outputs:
+  WebEndpoint:
+    Description: API Gateway endpoint URL for api stage
+    Value: !Sub "https://${ConversationApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/api/"
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Api:
+    OpenApiVersion: 3.0.1
+  Function:
+    LoggingConfig:
+      LogFormat: JSON

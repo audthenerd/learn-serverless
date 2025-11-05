@@ -1,0 +1,21 @@
+{
+  "name": "conversation-api",
+  "description": "Serverless conversation API with TypeScript",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.398.0",
+    "@aws-sdk/lib-dynamodb": "^3.398.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^20.10.0",
+    "esbuild": "^0.19.8",
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "clean": "rm -rf .build && rm -rf .aws-sam",
+    "build": "chmod +x build.sh && ./build.sh && sam build",
+    "deploy": "chmod +x deploy.sh && ./deploy.sh \"${npm_config_profile:-default}\""
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "httpMethod": "GET",
+  "path": "/conversations/conv-123",
+  "pathParameters": {
+    "id": "conv-123"
+  },
+  "queryStringParameters": null,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": null,
+  "isBase64Encoded": false
+}
