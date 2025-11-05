@@ -1,6 +1,6 @@
 # Lesson 1: Building Your First Serverless Backend
 
-**Duration:** 2-3 hours  
+**Duration:** 45 minutes  
 **Level:** Beginner to Intermediate
 
 ## Learning Objectives
@@ -21,6 +21,19 @@ A complete serverless backend featuring:
 - **API Gateway** for RESTful endpoints
 - **DynamoDB** for data persistence
 - A working CRUD (Create, Read, Update, Delete) API
+
+## Lesson Format
+
+This 45-minute lesson includes:
+- **Core exercises** - Essential activities to complete during class time
+- **Optional exercises** - Marked as "(Optional)" - Skip during lesson, explore later
+- **Reference sections** - Background information for post-lesson study
+
+**Recommended Time Allocation:**
+- Step 1 (Init): 5-10 minutes
+- Step 2 (Local Testing): 10-15 minutes  
+- Step 3 (Deploy & Test): 15-20 minutes
+- Step 4 (Cleanup): 5 minutes
 
 ## Prerequisites Checklist
 
@@ -48,7 +61,7 @@ docker --version
 ## Step 1: Initialize Your SAM Project
 
 **Objective:** Create a new serverless application using AWS SAM CLI  
-**Time:** 15 minutes
+**Time:** 5-10 minutes
 
 ### 📚 Theory: What is AWS SAM?
 
@@ -150,7 +163,7 @@ Before moving on, verify:
 ## Step 2: Develop and Test Locally
 
 **Objective:** Run and test your Lambda functions locally before deploying to AWS  
-**Time:** 30-40 minutes
+**Time:** 10-15 minutes
 
 ### 📚 Theory: Why Test Locally?
 
@@ -212,7 +225,7 @@ curl http://127.0.0.1:3000/hello
 
 4. Try accessing the endpoint in your browser: `http://127.0.0.1:3000/hello`
 
-### 🎯 Exercise 2.3: Invoke Lambda Functions Directly
+### 🎯 Exercise 2.3: Invoke Lambda Functions Directly (Optional)
 
 **Task:** Test individual Lambda functions with custom event payloads.
 
@@ -249,7 +262,7 @@ Create `events/custom-event.json`:
 sam local invoke HelloWorldFunction -e events/custom-event.json
 ```
 
-### 🛠️ Exercise 2.4: Generate Sample Events
+### 🛠️ Exercise 2.4: Generate Sample Events (Optional - If Time Permits)
 
 **Task:** Learn to generate event payloads for different AWS services.
 
@@ -271,7 +284,7 @@ sam local generate-event sns notification > events/sns-event.json
 
 Open any generated file to see the event structure for that service.
 
-### 🔄 Exercise 2.5: Development with Live Reload (Optional)
+### 🔄 Exercise 2.5: Development with Live Reload (Optional - Advanced)
 
 **Task:** Set up automatic rebuilding when code changes.
 
@@ -282,9 +295,9 @@ sam build --use-container
 sam sync --stack-name dev-stack --watch
 ```
 
-**Note:** This requires an actual AWS deployment. We'll return to this after Step 3.
+**Note:** This requires an actual AWS deployment. Skip this during the lesson - explore it later!
 
-### 🗄️ Working with Local DynamoDB (Advanced)
+### 🗄️ Working with Local DynamoDB (Optional - Advanced)
 
 If your template includes DynamoDB tables, you can test with a local database:
 
@@ -303,13 +316,12 @@ sam local start-api
 
 ### ✅ Checkpoint 2
 
-Before moving on, verify:
+Before moving on, verify you've completed the core exercises:
 - [ ] You successfully ran `sam build` without errors
 - [ ] Your local API started and showed mounted endpoints
 - [ ] You made a successful curl request to `http://127.0.0.1:3000/hello`
-- [ ] You invoked a Lambda function directly using `sam local invoke`
-- [ ] You created at least one custom event file
-- [ ] You understand the difference between `start-api` and `invoke`
+
+**Optional exercises can be explored after the lesson!**
 
 ### 💡 Key Takeaways
 
@@ -325,7 +337,7 @@ Before moving on, verify:
 ## Step 3: Deploy to AWS and Test Production
 
 **Objective:** Deploy your serverless application to AWS and test live endpoints  
-**Time:** 45-60 minutes
+**Time:** 15-20 minutes
 
 ### 📚 Theory: Understanding Deployment
 
@@ -387,7 +399,7 @@ Value               https://abc123xyz.execute-api.us-east-1.amazonaws.com/Prod/h
 
 6. **Copy this URL** - you'll need it for testing!
 
-### 📝 Exercise 3.2: Understanding What Was Created
+### 📝 Exercise 3.2: Understanding What Was Created (Optional - If Time Permits)
 
 **Task:** Explore the AWS resources that were created.
 
@@ -440,7 +452,7 @@ curl -i https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod/hello
 
 Notice the `x-amzn-requestid` header - this is your request's unique identifier.
 
-### 🎯 Exercise 3.4: Test CRUD Operations (If using Serverless API)
+### 🎯 Exercise 3.4: Test CRUD Operations (Optional - If using Serverless API template)
 
 **Task:** Test Create, Read, Update, and Delete operations on your API.
 
@@ -494,7 +506,7 @@ curl -X DELETE \
 curl "https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod/items?limit=10&offset=0"
 ```
 
-### 🗄️ Exercise 3.5: Verify DynamoDB Data
+### 🗄️ Exercise 3.5: Verify DynamoDB Data (Optional)
 
 **Task:** Use AWS CLI to inspect your DynamoDB table directly.
 
@@ -518,7 +530,7 @@ aws dynamodb get-item \
   --key '{"id": {"S": "item-001"}}'
 ```
 
-### 📊 Exercise 3.6: Monitor Lambda Execution
+### 📊 Exercise 3.6: Monitor Lambda Execution (Optional)
 
 **Task:** View real-time logs from your Lambda functions.
 
@@ -540,7 +552,7 @@ aws lambda list-functions --query 'Functions[*].FunctionName'
 aws logs tail /aws/lambda/your-function-name --follow
 ```
 
-### 🔧 Exercise 3.7: Make Changes and Redeploy
+### 🔧 Exercise 3.7: Make Changes and Redeploy (Optional)
 
 **Task:** Experience the deployment workflow by making a code change.
 
@@ -575,15 +587,13 @@ curl https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod/hello
 
 ### ✅ Checkpoint 3
 
-Before moving on, verify:
+Before moving on, verify you've completed the core exercises:
 - [ ] You successfully deployed your application with `sam deploy --guided`
 - [ ] You received an API Gateway endpoint URL
 - [ ] You made at least one successful curl request to your production API
-- [ ] You viewed your Lambda function in the AWS Console
-- [ ] You checked DynamoDB for your data (if applicable)
-- [ ] You viewed Lambda logs using `sam logs`
-- [ ] You made a code change and redeployed successfully
-- [ ] Your `samconfig.toml` file was created (for future deployments)
+- [ ] You understand how to test API endpoints with curl
+
+**Optional exercises (monitoring, redeployment, etc.) can be explored after the lesson!**
 
 ### 💡 Key Takeaways
 
@@ -600,7 +610,7 @@ Before moving on, verify:
 ## Step 4: Clean Up AWS Resources
 
 **Objective:** Properly delete all AWS resources to avoid ongoing charges  
-**Time:** 10-15 minutes
+**Time:** 5 minutes
 
 ### 📚 Theory: Why Clean Up Matters
 
@@ -643,11 +653,11 @@ Are you sure you want to delete the folder my-first-serverless-app in S3 which c
 Deleted successfully
 ```
 
-### 🔍 Exercise 4.2: Verify Complete Deletion
+### 🔍 Exercise 4.2: Verify Complete Deletion (Optional - Quick Check)
 
 **Task:** Confirm all resources were removed.
 
-1. Try to describe the stack (should fail):
+Try to describe the stack (should fail):
 
 ```bash
 aws cloudformation describe-stacks --stack-name my-first-serverless-app
@@ -659,23 +669,9 @@ An error occurred (ValidationError) when calling the DescribeStacks operation:
 Stack with id my-first-serverless-app does not exist
 ```
 
-2. Check that your Lambda function is gone:
+If you see this error, your cleanup was successful!
 
-```bash
-aws lambda list-functions | grep my-first-serverless-app
-```
-
-(Should return nothing)
-
-3. Verify DynamoDB tables are removed:
-
-```bash
-aws dynamodb list-tables
-```
-
-(Your table should not appear in the list)
-
-### 🚀 Alternative Deletion Methods
+### 🚀 Alternative Deletion Methods (Reference Only)
 
 #### Method 2: Delete Without Prompts
 
@@ -698,7 +694,7 @@ aws cloudformation describe-stacks --stack-name my-first-serverless-app \
   --query 'Stacks[0].StackStatus'
 ```
 
-### 🧹 Exercise 4.3: Manual Cleanup (If Needed)
+### 🧹 Exercise 4.3: Manual Cleanup (Reference - Skip During Lesson)
 
 **Task:** Learn to manually remove resources if automatic deletion fails.
 
@@ -744,7 +740,7 @@ aws apigateway get-rest-apis
 aws apigateway delete-rest-api --rest-api-id your-api-id
 ```
 
-### 🎓 Exercise 4.4: Review AWS Console
+### 🎓 Exercise 4.4: Review AWS Console (Optional - Post-Lesson)
 
 **Task:** Visually confirm deletion in the AWS Console.
 
@@ -760,7 +756,7 @@ aws apigateway delete-rest-api --rest-api-id your-api-id
 
 6. Check **S3** → Verify deployment buckets are removed (may take a few minutes)
 
-### 💰 Exercise 4.5: Cost Verification (Optional)
+### 💰 Exercise 4.5: Cost Verification (Optional - Post-Lesson)
 
 **Task:** Verify you won't incur unexpected charges.
 
@@ -786,15 +782,11 @@ aws cloudwatch put-metric-alarm \
 
 ### ✅ Final Checkpoint
 
-Confirm you've completed cleanup:
+Confirm you've completed the core cleanup:
 - [ ] Ran `sam delete` successfully
-- [ ] Verified stack no longer exists with `describe-stacks`
-- [ ] Checked AWS Console and confirmed resources are deleted
-- [ ] No Lambda functions remain from this lesson
-- [ ] No API Gateway endpoints remain
-- [ ] No DynamoDB tables remain (unless you want to keep them)
-- [ ] S3 deployment buckets are removed
-- [ ] CloudWatch log groups are deleted (or you understand they're minimal cost)
+- [ ] Saw "Deleted successfully" message
+
+**That's it!** Your AWS resources have been cleaned up. The optional verification steps above can be explored after the lesson if you want to learn more about what happens behind the scenes.
 
 ### 💡 Key Takeaways
 
