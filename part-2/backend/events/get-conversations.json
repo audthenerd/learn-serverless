@@ -1,0 +1,11 @@
+{
+  "httpMethod": "GET",
+  "path": "/conversations",
+  "pathParameters": null,
+  "queryStringParameters": null,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": null,
+  "isBase64Encoded": false
+}
