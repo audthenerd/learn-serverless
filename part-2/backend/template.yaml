@@ -49,6 +49,32 @@ Resources:
             Path: /conversations
             Method: GET
 
+  # Create a new conversation
+  CreateConversationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/create-conversation/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: Create a new conversation in DynamoDB
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConversationTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ConversationTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ConversationApi
+            Path: /conversations
+            Method: POST
+
   # Get specific conversation by ID
   GetConversationByIdFunction:
     Type: AWS::Serverless::Function

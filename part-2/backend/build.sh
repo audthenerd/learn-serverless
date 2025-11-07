@@ -10,6 +10,7 @@ mkdir -p .build
 # Array of handler directories
 handlers=(
   "get-conversations"
+  "create-conversation"
   "get-conversation-by-id"
   "generate-response"
   "summarize"
