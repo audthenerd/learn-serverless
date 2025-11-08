@@ -16,7 +16,7 @@ cp .env.example .env
 npm run build
 
 # 4. Deploy to AWS
-npm run deploy --profile=notifly-dev
+npm run deploy --profile=<profile-name>
 
 # Clean build artifacts
 npm run clean
@@ -26,26 +26,50 @@ npm run clean
 
 ```
 backend/
-├── src/handlers/                  # Source TypeScript handlers
-│   ├── get-conversations/          # GET /conversations
-│   │   ├── index.ts               # Handler TypeScript source
-│   │   └── package.json           # Handler package
-│   ├── get-conversation-by-id/    # GET /conversations/:id
-│   ├── generate-response/         # POST /generateResponse
-│   └── summarize/                 # POST /summarize
-├── .build/                        # Compiled JavaScript (generated)
-│   ├── get-conversations/
-│   │   ├── index.js              # Compiled handler
-│   │   └── package.json          # Copied package.json
-│   └── ...                       # Other handlers
-├── .env                           # Environment variables (gitignored)
-├── .env.example                   # Environment template (committed)
-├── template.yaml                  # SAM template (reads from .build/)
-├── package.json                   # Root dependencies
+├── src/                           # Source TypeScript code
+│   ├── handlers/                   # Lambda function handlers
+│   │   ├── get-conversations/      # GET /conversations
+│   │   │   └── index.ts           # Handler TypeScript source
+│   │   ├── create-conversation/   # POST /conversations
+│   │   ├── get-conversation-by-id/ # GET /conversations/:id
+│   │   ├── generate-response/     # POST /generateResponse
+│   │   └── summarize/             # POST /summarize
+│   └── utils/                     # Shared utility modules
+│       └── ai-helper.ts           # AI integration helper
+│
+├── .build/                        # Compiled output (generated)
+│   ├── handlers/                   # Compiled handlers
+│   │   ├── generate-response/
+│   │   │   ├── index.mjs          # ES module (renamed from .js)
+│   │   │   ├── utils/             # Copied utils (imports fixed)
+│   │   │   │   └── ai-helper.mjs
+│   │   │   └── node_modules/      # Symlink to production deps
+│   │   └── ...                    # Other handlers
+│   ├── utils/                      # Compiled shared utils
+│   ├── node_modules/               # Production-only dependencies
+│   └── package.json                # With "type": "module"
+│
+├── template.yaml                  # SAM CloudFormation template
+├── package.json                   # Dependencies and scripts
 ├── tsconfig.json                  # TypeScript configuration
-├── build.sh                       # TypeScript build script
-└── deploy.sh                      # Deployment script with secrets
+├── build.sh                       # Build automation script
+├── deploy.sh                      # Deployment script
+└── samconfig.toml                 # SAM CLI configuration
 ```
+
+## 🏗️ Build Process
+
+The build process is automated in `build.sh`:
+
+1. **Compile TypeScript** → `.build/` directory (preserves structure)
+2. **Install production dependencies** → `.build/node_modules/` (no devDependencies)
+3. **For each handler:**
+   - Copy `utils/` folder into handler directory
+   - Fix import paths (remove `../../`, add `.mjs` extensions)
+   - Rename `.js` → `.mjs` (ES modules without package.json)
+   - Symlink to shared production `node_modules`
+
+**Result:** Each Lambda package contains only its code + utils, sharing node_modules via symlink.
 
 ## 🔌 API Endpoints
 
@@ -54,6 +78,7 @@ backend/
 | Method | Endpoint             | Description                          |
 | ------ | -------------------- | ------------------------------------ |
 | GET    | `/conversations`     | List all conversation IDs            |
+| POST   | `/conversations`     | Create a new conversation            |
 | GET    | `/conversations/:id` | Get specific conversation            |
 | POST   | `/generateResponse`  | Generate AI response (with OpenAI)   |
 | POST   | `/summarize`         | Summarize conversation (placeholder) |
@@ -71,7 +96,7 @@ npm run clean
 npm run build
 
 # Deploy with profile
-npm run deploy --profile=notifly-dev
+npm run deploy --profile=<profile-name>
 
 # Or deploy with default profile
 npm run deploy
@@ -102,23 +127,42 @@ Replace `<api-gateway-url>` with your actual API Gateway endpoint from deploymen
 # Get all conversations
 curl https://<api-gateway-url>/api/conversations
 
+# Create a new conversation
+curl -X POST https://<api-gateway-url>/api/conversations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "initialMessage": "I think we should prioritize short-term gains",
+    "personas": {
+      "initiator": {
+        "job_title": "Sales Director",
+        "traits": ["aggressive", "results-oriented"],
+        "values": ["revenue", "market share"],
+        "communication_style": "direct and persuasive"
+      },
+      "responder": {
+        "job_title": "Chief Technology Officer",
+        "traits": ["analytical", "risk-averse"],
+        "values": ["innovation", "long-term sustainability"],
+        "communication_style": "data-driven and cautious"
+      }
+    }
+  }'
+
 # Get specific conversation
 curl https://<api-gateway-url>/api/conversations/<conversation-id>
 
-# Generate AI response (new conversation)
+# Generate AI response
 curl -X POST https://<api-gateway-url>/api/generateResponse \
   -H "Content-Type: application/json" \
-  -d '{"message":"What is quantum computing?"}'
-
-# Generate AI response (continue conversation)
-curl -X POST https://<api-gateway-url>/api/generateResponse \
-  -H "Content-Type: application/json" \
-  -d '{"conversationId":"<uuid>","message":"Tell me more"}'
+  -d '{
+    "conversationId": "<uuid>",
+    "turn": "responder"
+  }'
 
 # Summarize conversation
 curl -X POST https://<api-gateway-url>/api/summarize \
   -H "Content-Type: application/json" \
-  -d '{"conversationId":"<uuid>"}'
+  -d '{"conversationId": "<uuid>"}'
 ```
 
 ### Local Testing
@@ -175,21 +219,40 @@ The API key is passed as a CloudFormation parameter during deployment:
 ```json
 {
   "conversation-id": "550e8400-e29b-41d4-a716-446655440000",
+  "personas": {
+    "initiator": {
+      "job_title": "Sales Director",
+      "traits": ["aggressive", "results-oriented"],
+      "values": ["revenue", "market share"],
+      "communication_style": "direct and persuasive"
+    },
+    "responder": {
+      "job_title": "Chief Technology Officer",
+      "traits": ["analytical", "risk-averse"],
+      "values": ["innovation", "long-term sustainability"],
+      "communication_style": "data-driven and cautious"
+    }
+  },
   "messages": [
-    "What is quantum computing?",
-    "Quantum computing is...",
-    "Tell me more",
-    "Here's more details..."
-  ],
-  "timestamp": "2025-11-06T10:00:00.000Z",
-  "updatedAt": "2025-11-06T10:15:00.000Z"
+    {
+      "from": "initiator",
+      "message": "I think we should prioritize short-term gains"
+    },
+    {
+      "from": "responder",
+      "message": "We need to consider long-term sustainability..."
+    }
+  ]
 }
 ```
 
 **Field Descriptions:**
 
 - `conversation-id`: Auto-generated UUID for new conversations
-- `messages`: Array of strings (alternating user/AI messages)
+- `topic`: String describing the conversation topic
+- `turn`: String indicating the turn/round number
+- `prompt`: Object containing prompt configuration (e.g., systemMessage, context, etc.)
+- `chat`: Array of objects with `persona` (user/assistant) and `message` (string)
 - `timestamp`: Original creation timestamp
 - `updatedAt`: Last modification timestamp
 
@@ -212,15 +275,19 @@ src/handlers/*/index.ts  →  npm run build  →  .build/*/index.js  →  sam bu
 
 ### Generate Response Flow
 
-1. Parse incoming `message` from request body
-2. Generate UUID if `conversationId` not provided (new conversation)
-3. Fetch existing conversation from DynamoDB (if exists)
-4. Append user message to messages array
-5. Save to DynamoDB (for new conversations only)
-6. Call OpenAI Lambda URL with conversation history
-7. Extract AI response from API
-8. Append AI response to messages array
-9. Update conversation in DynamoDB
+1. Parse incoming `topic`, `turn`, `prompt`, and `chat` from request body
+2. Validate that `chat` is an array with proper structure
+3. Validate that `topic`, `turn`, and `prompt` are provided
+4. Generate UUID if `conversationId` not provided (new conversation)
+5. Fetch existing conversation from DynamoDB (if exists)
+6. Append new chat messages to chat history array
+7. Save to DynamoDB (for new conversations only)
+8. If chat history is empty, return early without calling AI
+9. Convert chat history to AI message format
+10. Call OpenAI Lambda URL with conversation history
+11. Extract AI response from API
+12. Append AI response as assistant message to chat history
+13. Update conversation in DynamoDB with topic, turn, prompt, and updated chat history
 
 ### AI Integration
 

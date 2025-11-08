@@ -5,7 +5,7 @@ import {
   PutCommand,
   GetCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { randomUUID } from "crypto";
+import { callAI } from "../../utils/ai-helper";
 
 const client = new DynamoDBClient({});
 const ddbDocClient = DynamoDBDocumentClient.from(client);
@@ -16,14 +16,13 @@ const aiApiKey = process.env.AI_API_KEY || "";
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log("Event:", JSON.stringify(event, null, 2));
-
   try {
     // Parse the request body
     const body = event.body ? JSON.parse(event.body) : {};
-    let { conversationId, message } = body;
+    const { conversationId, turn } = body;
 
-    if (!message) {
+    // Validate mandatory inputs
+    if (!conversationId) {
       return {
         statusCode: 400,
         headers: {
@@ -31,108 +30,154 @@ export const handler = async (
           "Access-Control-Allow-Origin": "*",
         },
         body: JSON.stringify({
-          message: "Missing required field: message",
+          message: "Missing required field: conversationId",
         }),
       };
     }
 
-    // Generate UUID if conversationId is not provided
-    const isNewConversation = !conversationId;
-    if (isNewConversation) {
-      conversationId = randomUUID();
-    }
-
-    const timestamp = new Date().toISOString();
-
-    // Get existing conversation or initialize new messages array
-    let messages: string[] = [];
-    let originalTimestamp = timestamp;
-
-    if (!isNewConversation) {
-      // Fetch existing conversation to get current messages
-      const getParams = {
-        TableName: tableName,
-        Key: {
-          "conversation-id": conversationId,
-        },
-      };
-
-      const existingData = await ddbDocClient.send(new GetCommand(getParams));
-      if (existingData.Item && existingData.Item.messages) {
-        messages = existingData.Item.messages as string[];
-      }
-      if (existingData.Item && existingData.Item.timestamp) {
-        originalTimestamp = existingData.Item.timestamp as string;
-      }
-    }
-
-    // Append new user message
-    messages.push(message);
-
-    // Save new conversation before calling AI (so user message is persisted)
-    if (isNewConversation) {
-      const initialSaveParams = {
-        TableName: tableName,
-        Item: {
-          "conversation-id": conversationId,
-          messages,
-          timestamp: originalTimestamp,
-          updatedAt: timestamp,
-        },
-      };
-      await ddbDocClient.send(new PutCommand(initialSaveParams));
-    }
-
-    // Generate AI response by calling the Lambda URL
-    const aiRequest = {
-      messages: messages.map((msg, index) => ({
-        role: index % 2 === 0 ? "user" : "assistant",
-        content: msg,
-      })),
-      max_tokens: 500,
-      temperature: 0.7,
-    };
-
-    const aiResponse = await fetch(
-      "https://4ebp5kndnp43j6uqz7y53u4dly0jwule.lambda-url.ap-southeast-1.on.aws/",
-      {
-        method: "POST",
+    if (!turn) {
+      return {
+        statusCode: 400,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${aiApiKey}`,
+          "Access-Control-Allow-Origin": "*",
         },
-        body: JSON.stringify(aiRequest),
-      }
-    );
-
-    if (!aiResponse.ok) {
-      throw new Error(
-        `AI service returned ${aiResponse.status}: ${aiResponse.statusText}`
-      );
+        body: JSON.stringify({
+          message: "Missing required field: turn",
+        }),
+      };
     }
 
-    const aiData = (await aiResponse.json()) as {
-      choices: Array<{
-        message: {
-          content: string;
-        };
-      }>;
+    // Validate turn is either 'initiator' or 'responder'
+    if (turn !== "initiator" && turn !== "responder") {
+      return {
+        statusCode: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({
+          message: "turn must be either 'initiator' or 'responder'",
+        }),
+      };
+    }
+
+    // Validate AI API key is configured
+    if (!aiApiKey) {
+      return {
+        statusCode: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({
+          message: "AI API key is not configured",
+        }),
+      };
+    }
+
+    // Read conversation with conversationId
+    const getParams = {
+      TableName: tableName,
+      Key: {
+        "conversation-id": conversationId,
+      },
     };
 
-    // Extract the generated message from the response
-    const generatedResponse = aiData.choices[0].message.content;
+    const convoData = await ddbDocClient.send(new GetCommand(getParams));
 
-    // Append AI response to messages
-    messages.push(generatedResponse);
+    // Return error if conversationId not found
+    if (!convoData.Item) {
+      return {
+        statusCode: 404,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({
+          message: "Conversation not found",
+        }),
+      };
+    }
 
-    // Update the conversation with the generated response
+    const convo = convoData.Item;
+    const messages = convo.messages || [];
+    const personas = convo.personas;
+
+    // Validate personas exist
+    if (!personas || !personas.initiator || !personas.responder) {
+      return {
+        statusCode: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({
+          message: "Conversation is missing personas data",
+        }),
+      };
+    }
+
+    // Validate messages exist (should have at least initialMessage from initiator)
+    if (!messages || messages.length === 0) {
+      return {
+        statusCode: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({
+          message: "Conversation has no messages",
+        }),
+      };
+    }
+
+    // Get the current persona based on turn
+    const currentPersona = personas[turn];
+
+    // Build system prompt with persona context
+    const systemPrompt = `You are a ${currentPersona.job_title}.
+Traits: ${currentPersona.traits.join(", ")}.
+Values: ${currentPersona.values.join(", ")}.
+Communication style: ${currentPersona.communication_style}.
+Your goal is to argue your perspective in this debate clearly and rationally.`;
+
+    // Convert entire conversation history to AI message format
+    const conversationHistory = messages.map((msg: any) => ({
+      role: msg.from === turn ? "assistant" : "user",
+      content: msg.message,
+    }));
+
+    // Build the full context with system prompt and conversation history
+    const aiMessages = [
+      {
+        role: "system",
+        content: systemPrompt,
+      },
+      ...conversationHistory,
+      {
+        role: "user",
+        content: `Continue the debate as the ${turn}. Keep response to max 200 characters.`,
+      },
+    ];
+
+    const response = await callAI(aiMessages, aiApiKey);
+
+    // Format response to save to db
+    const formattedResponse = {
+      from: turn,
+      message: response,
+    };
+
+    // Update messages array with new response
+    const updatedMessages = [...messages, formattedResponse];
+
+    // Save updated conversation with new message
     const updateParams = {
       TableName: tableName,
       Item: {
-        "conversation-id": conversationId,
-        messages,
-        timestamp: originalTimestamp,
-        updatedAt: new Date().toISOString(),
+        ...convo,
+        messages: updatedMessages,
       },
     };
 
@@ -144,11 +189,7 @@ export const handler = async (
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-      body: JSON.stringify({
-        conversationId,
-        response: generatedResponse,
-        timestamp,
-      }),
+      body: JSON.stringify(formattedResponse),
     };
   } catch (error) {
     console.error("Error:", error);

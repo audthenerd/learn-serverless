@@ -10,8 +10,6 @@ const tableName = process.env.TABLE_NAME;
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log("Event:", JSON.stringify(event, null, 2));
-
   try {
     // Scan the table to get all conversation IDs
     const params = {

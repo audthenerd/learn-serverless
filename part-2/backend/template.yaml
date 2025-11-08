@@ -27,7 +27,7 @@ Resources:
   GetConversationsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/get-conversations/
+      CodeUri: .build/handlers/get-conversations/
       Handler: index.handler
       Runtime: nodejs22.x
       Architectures:
@@ -53,7 +53,7 @@ Resources:
   CreateConversationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/create-conversation/
+      CodeUri: .build/handlers/create-conversation/
       Handler: index.handler
       Runtime: nodejs22.x
       Architectures:
@@ -79,7 +79,7 @@ Resources:
   GetConversationByIdFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/get-conversation-by-id/
+      CodeUri: .build/handlers/get-conversation-by-id/
       Handler: index.handler
       Runtime: nodejs22.x
       Architectures:
@@ -105,7 +105,7 @@ Resources:
   GenerateResponseFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/generate-response/
+      CodeUri: .build/handlers/generate-response/
       Handler: index.handler
       Runtime: nodejs22.x
       Architectures:
@@ -132,7 +132,7 @@ Resources:
   SummarizeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/summarize/
+      CodeUri: .build/handlers/summarize/
       Handler: index.handler
       Runtime: nodejs22.x
       Architectures:
@@ -146,6 +146,7 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref ConversationTable
+          AI_API_KEY: !Ref AiApiKey
       Events:
         Api:
           Type: Api

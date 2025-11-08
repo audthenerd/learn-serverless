@@ -11,14 +11,12 @@ const tableName = process.env.TABLE_NAME;
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log("Event:", JSON.stringify(event, null, 2));
-
   try {
     // Parse the request body
     const body = event.body ? JSON.parse(event.body) : {};
-    const { topic } = body;
+    const { initialMessage, personas } = body;
 
-    if (!topic) {
+    if (!initialMessage || initialMessage.trim() === "") {
       return {
         statusCode: 400,
         headers: {
@@ -26,24 +24,54 @@ export const handler = async (
           "Access-Control-Allow-Origin": "*",
         },
         body: JSON.stringify({
-          message: "Missing required field: topic",
+          message: "Missing required field: initialMessage (cannot be empty)",
+        }),
+      };
+    }
+
+    if (!personas) {
+      return {
+        statusCode: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({
+          message: "Missing required field: personas",
+        }),
+      };
+    }
+
+    // Validate personas structure
+    if (!personas.initiator || !personas.responder) {
+      return {
+        statusCode: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({
+          message: "personas must contain both 'initiator' and 'responder'",
         }),
       };
     }
 
     // Generate UUID for new conversation
     const conversationId = randomUUID();
-    const timestamp = new Date().toISOString();
 
-    // Create conversation with empty message array
+    // Create first message from initiator with initialMessage
+    const firstMessage = {
+      from: "initiator",
+      message: initialMessage,
+    };
+
+    // Create conversation with first message from initiator and personas
     const params = {
       TableName: tableName,
       Item: {
         "conversation-id": conversationId,
-        topic,
-        messages: [],
-        timestamp,
-        updatedAt: timestamp,
+        personas,
+        messages: [firstMessage],
       },
     };
 
@@ -56,7 +84,7 @@ export const handler = async (
         "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify({
-        "conversation-id": conversationId,
+        conversationId: conversationId,
       }),
     };
   } catch (error) {
