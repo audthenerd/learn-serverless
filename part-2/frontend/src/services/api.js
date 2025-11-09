@@ -66,17 +66,46 @@ class ApiService {
   }
 
   /**
+   * Create a new conversation with a topic
+   * POST /conversations
+   * Body: { initialMessage: string, personas: { initiator, responder } }
+   * Returns: { conversationId: string }
+   */
+  async createConversation(topic, personas = null) {
+    return this.request('/conversations', {
+      method: 'POST',
+      body: JSON.stringify({
+        initialMessage: topic,
+        personas: personas || {
+          initiator: {
+            job_title: 'Creative Problem Solver',
+            traits: ['creative', 'empathetic', 'innovative'],
+            values: ['user experience', 'collaboration', 'innovation'],
+            communication_style: 'engaging and thought-provoking'
+          },
+          responder: {
+            job_title: 'Technical Architect',
+            traits: ['analytical', 'pragmatic', 'systematic'],
+            values: ['efficiency', 'best practices', 'scalability'],
+            communication_style: 'logical and structured'
+          }
+        }
+      }),
+    });
+  }
+
+  /**
    * Generate AI response for a conversation
    * POST /generateResponse
-   * Body: { conversationId?: string, message: string }
-   * Returns: { conversationId: string, response: string, timestamp: string }
+   * Body: { conversationId: string, turn: 'initiator' | 'responder' }
+   * Returns: { from: string, message: string }
    */
-  async generateResponse(message, conversationId = null) {
+  async generateResponse(conversationId, turn) {
     return this.request('/generateResponse', {
       method: 'POST',
       body: JSON.stringify({
         conversationId,
-        message,
+        turn,
       }),
     });
   }
