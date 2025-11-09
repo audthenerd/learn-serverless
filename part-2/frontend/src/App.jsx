@@ -3,6 +3,7 @@ import './App.css';
 import { conversation } from './mock/conversationData';
 import api from './services/api';
 import { createMessage } from './utils/dataTransform';
+import { PERSONA_OPTIONS } from './data/personas';
 
 function App() {
   // UI State
@@ -19,6 +20,10 @@ function App() {
   // Topic Input State
   const [topic, setTopic] = useState('');
   const [debateSummary, setDebateSummary] = useState(null);
+
+  // Persona Selection State
+  const [aliceRole, setAliceRole] = useState('creative_solver'); // default
+  const [bobRole, setBobRole] = useState('technical_architect'); // default
 
   // Check if API is configured on mount
   useEffect(() => {
@@ -135,8 +140,26 @@ function App() {
       setDebateSummary(null);
       console.log(`🎯 Starting debate with topic: "${topic}"`);
 
-      // Create conversation with topic (this creates first message from initiator/Alice)
-      const response = await api.createConversation(topic);
+      // Get selected personas
+      const alicePersona = PERSONA_OPTIONS.find(
+        (p) => p.value === aliceRole
+      )?.persona;
+      const bobPersona = PERSONA_OPTIONS.find(
+        (p) => p.value === bobRole
+      )?.persona;
+
+      // Create personas object for backend
+      const personas = {
+        initiator: alicePersona,
+        responder: bobPersona,
+      };
+
+      console.log(
+        `👥 Alice as ${alicePersona.name} vs Bob as ${bobPersona.name}`
+      );
+
+      // Create conversation with topic and selected personas
+      const response = await api.createConversation(topic, personas);
       setConversationId(response.conversationId);
 
       console.log('✅ Debate conversation created:', response.conversationId);
@@ -231,7 +254,48 @@ function App() {
       {useBackend && !conversationId && (
         <div className="topic-input-section">
           <h2>🎯 Start a Debate</h2>
-          <p>Enter a topic for Alice and Bob to debate:</p>
+          <p>Choose roles and enter a topic for the debate:</p>
+
+          {/* Role Selection */}
+          <div className="role-selection-container">
+            <div className="role-selector">
+              <label htmlFor="alice-role">👩‍💻 Alice's Role:</label>
+              <select
+                id="alice-role"
+                className="role-dropdown"
+                value={aliceRole}
+                onChange={(e) => setAliceRole(e.target.value)}
+                disabled={loading}
+              >
+                {PERSONA_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="vs-divider">VS</div>
+
+            <div className="role-selector">
+              <label htmlFor="bob-role">🧑‍💻 Bob's Role:</label>
+              <select
+                id="bob-role"
+                className="role-dropdown"
+                value={bobRole}
+                onChange={(e) => setBobRole(e.target.value)}
+                disabled={loading}
+              >
+                {PERSONA_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Topic Input */}
           <div className="topic-input-container">
             <input
               type="text"
@@ -264,7 +328,10 @@ function App() {
           <div className="avatar alice-avatar">A</div>
           <div className="persona-info">
             <h3>Alice</h3>
-            <p>Creative Problem Solver</p>
+            <p>
+              {PERSONA_OPTIONS.find((p) => p.value === aliceRole)?.label ||
+                'Creative Problem Solver'}
+            </p>
           </div>
         </div>
         <div className="vs">VS</div>
@@ -272,7 +339,10 @@ function App() {
           <div className="avatar bob-avatar">B</div>
           <div className="persona-info">
             <h3>Bob</h3>
-            <p>Technical Architect</p>
+            <p>
+              {PERSONA_OPTIONS.find((p) => p.value === bobRole)?.label ||
+                'Technical Architect'}
+            </p>
           </div>
         </div>
       </div>
