@@ -6,6 +6,6 @@
   "headers": {
     "Content-Type": "application/json"
   },
-  "body": "{\"conversationId\":\"conv-123\",\"message\":\"What is serverless computing?\"}",
+  "body": "{\"conversationId\":\"conv-123\",\"turn\":\"initiator\"}",
   "isBase64Encoded": false
 }

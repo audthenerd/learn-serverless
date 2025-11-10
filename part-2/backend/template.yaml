@@ -27,7 +27,7 @@ Resources:
   GetConversationsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/get-conversations/
+      CodeUri: .build/handlers/get-conversations/
       Handler: index.handler
       Runtime: nodejs22.x
       Architectures:
@@ -49,11 +49,37 @@ Resources:
             Path: /conversations
             Method: GET
 
+  # Create a new conversation
+  CreateConversationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/handlers/create-conversation/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: Create a new conversation in DynamoDB
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConversationTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ConversationTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ConversationApi
+            Path: /conversations
+            Method: POST
+
   # Get specific conversation by ID
   GetConversationByIdFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/get-conversation-by-id/
+      CodeUri: .build/handlers/get-conversation-by-id/
       Handler: index.handler
       Runtime: nodejs22.x
       Architectures:
@@ -79,7 +105,7 @@ Resources:
   GenerateResponseFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/generate-response/
+      CodeUri: .build/handlers/generate-response/
       Handler: index.handler
       Runtime: nodejs22.x
       Architectures:
@@ -106,7 +132,7 @@ Resources:
   SummarizeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/summarize/
+      CodeUri: .build/handlers/summarize/
       Handler: index.handler
       Runtime: nodejs22.x
       Architectures:
@@ -120,6 +146,7 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref ConversationTable
+          AI_API_KEY: !Ref AiApiKey
       Events:
         Api:
           Type: Api
