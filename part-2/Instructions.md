@@ -476,25 +476,41 @@ Now let's deploy your new endpoint to AWS and test it!
 
 ### Step 4.6: Enable Summary Button in Frontend ✏️ (Action Required)
 
-Now let's enable the "Generate Summary" button in the frontend application.
+Now let's enable the "Summarize Debate" button in the frontend application.
 
-**Background:** The frontend code already includes the summarization feature, but it's currently hidden/disabled. We just need to enable it!
+**Background:** The frontend code already includes the summarization feature, but it's currently hidden. We just need to enable it!
 
 **Task:** Update the frontend to show the summary button
 
 1. **Open** `frontend/src/App.jsx`
 
-2. **Find the section** that renders the conversation controls (search for "Generate Summary" or similar button code)
+2. **Search for "Summarize Debate"** - You'll find a line that looks like:
 
-3. **Look for commented-out or conditional code** that hides the summary button
+   ```jsx
+   {false && useBackend && conversationId && messages.length > 2 && (
+   ```
 
-4. **Enable the summary functionality** - The button should be visible after conversations complete
+3. **Remove `false &&` from the condition** - Change it to:
 
-   > **Note:** The exact implementation may vary. Look for:
-   >
-   > - Commented JSX code with "summary" or "summarize"
-   > - Conditional rendering based on conversation state
-   > - Disabled buttons that need to be enabled
+   ```jsx
+   {useBackend && conversationId && messages.length > 2 && (
+   ```
+
+4. **The complete button section should now look like:**
+
+   ```jsx
+   {
+     useBackend && conversationId && messages.length > 2 && (
+       <button
+         onClick={summarizeDebate}
+         className="control-btn summarize-btn"
+         disabled={loading}
+       >
+         📝 Summarize Debate
+       </button>
+     );
+   }
+   ```
 
 5. **Save the file**
 
@@ -519,7 +535,7 @@ Let's test the complete flow from frontend to backend!
    npm run dev
    ```
 
-2. **Open your browser** to the local URL (usually `http://localhost:5173`)
+2. **Open your browser** to the local URL (usually `http://localhost:5174`)
 
 3. **Create a conversation:**
 

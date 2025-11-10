@@ -15,7 +15,7 @@ export const CreateConversationEventSchema = z.object({
         initialMessage: z.string().min(1, "initialMessage cannot be empty"),
         personas: z.object({
           initiator: z.object({
-            id: z.string(),
+            name: z.string(),
             job_title: z.string(),
             traits: z.array(z.string()).optional(),
             communication_style: z.string().optional(),
@@ -24,7 +24,7 @@ export const CreateConversationEventSchema = z.object({
             values: z.array(z.string()).optional(),
           }),
           responder: z.object({
-            id: z.string(),
+            name: z.string(),
             job_title: z.string(),
             traits: z.array(z.string()).optional(),
             communication_style: z.string().optional(),
