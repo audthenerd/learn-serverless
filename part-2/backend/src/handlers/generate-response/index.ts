@@ -1,22 +1,24 @@
+/**
+ * Generate Response Handler
+ *
+ * Generates an AI-powered response for a conversation based on persona traits and conversation history.
+ * Supports both initiator and responder turns with context-aware prompts and automatic message saving.
+ */
+
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import {
-  DynamoDBDocumentClient,
-  PutCommand,
-  GetCommand,
-} from "@aws-sdk/lib-dynamodb";
 import { callAI } from "../../utils/ai-helper";
-
-const client = new DynamoDBClient({});
-const ddbDocClient = DynamoDBDocumentClient.from(client);
-
-const tableName = process.env.TABLE_NAME;
-const aiApiKey = process.env.AI_API_KEY || "";
+import {
+  getConversationById,
+  addMessageToConversation,
+} from "../../utils/db-helper";
 
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
+    // Get request ID for correlation
+    const requestId = event.requestContext.requestId;
+
     // Parse the request body
     const body = event.body ? JSON.parse(event.body) : {};
     const { conversationId, turn } = body;
@@ -62,32 +64,11 @@ export const handler = async (
       };
     }
 
-    // Validate AI API key is configured
-    if (!aiApiKey) {
-      return {
-        statusCode: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: JSON.stringify({
-          message: "AI API key is not configured",
-        }),
-      };
-    }
-
     // Read conversation with conversationId
-    const getParams = {
-      TableName: tableName,
-      Key: {
-        "conversation-id": conversationId,
-      },
-    };
-
-    const convoData = await ddbDocClient.send(new GetCommand(getParams));
+    const convo = await getConversationById(conversationId);
 
     // Return error if conversationId not found
-    if (!convoData.Item) {
+    if (!convo) {
       return {
         statusCode: 404,
         headers: {
@@ -100,7 +81,6 @@ export const handler = async (
       };
     }
 
-    const convo = convoData.Item;
     const messages = convo.messages || [];
     const personas = convo.personas;
 
@@ -133,7 +113,7 @@ export const handler = async (
     }
 
     // Get the current persona based on turn
-    const currentPersona = personas[turn];
+    const currentPersona = personas[turn as keyof typeof personas];
 
     // Build system prompt with persona context
     const systemPrompt = `You are a ${currentPersona.job_title}.
@@ -161,7 +141,7 @@ Your goal is to argue your perspective in this debate clearly and rationally.`;
       },
     ];
 
-    const response = await callAI(aiMessages, aiApiKey);
+    const response = await callAI(aiMessages, requestId);
 
     // Format response to save to db
     const formattedResponse = {
@@ -173,15 +153,7 @@ Your goal is to argue your perspective in this debate clearly and rationally.`;
     const updatedMessages = [...messages, formattedResponse];
 
     // Save updated conversation with new message
-    const updateParams = {
-      TableName: tableName,
-      Item: {
-        ...convo,
-        messages: updatedMessages,
-      },
-    };
-
-    await ddbDocClient.send(new PutCommand(updateParams));
+    await addMessageToConversation(conversationId, updatedMessages);
 
     return {
       statusCode: 200,

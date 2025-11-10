@@ -1,104 +1,46 @@
+/**
+ * Create Conversation Handler
+ *
+ * Creates a new conversation with personas and an initial message, generating a unique UUID.
+ * Uses middy middleware for request validation and response formatting.
+ */
+
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import middy from "@middy/core";
 import { randomUUID } from "crypto";
+import {
+  zodValidator,
+  httpResponseFormatter,
+} from "../../middleware/middleware";
+import { CreateConversationEventSchema } from "./schema";
+import { createConversation } from "../../utils/db-helper";
 
-const client = new DynamoDBClient({});
-const ddbDocClient = DynamoDBDocumentClient.from(client);
-
-const tableName = process.env.TABLE_NAME;
-
-export const handler = async (
+const baseHandler = async (
   event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  try {
-    // Parse the request body
-    const body = event.body ? JSON.parse(event.body) : {};
-    const { initialMessage, personas } = body;
+): Promise<Partial<APIGatewayProxyResult>> => {
+  const body = JSON.parse(event.body!);
+  const { initialMessage, personas } = body;
 
-    if (!initialMessage || initialMessage.trim() === "") {
-      return {
-        statusCode: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: JSON.stringify({
-          message: "Missing required field: initialMessage (cannot be empty)",
-        }),
-      };
-    }
+  // Generate UUID for new conversation
+  const conversationId = randomUUID();
 
-    if (!personas) {
-      return {
-        statusCode: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: JSON.stringify({
-          message: "Missing required field: personas",
-        }),
-      };
-    }
+  // Create first message from initiator with initialMessage
+  const firstMessage = {
+    from: "initiator",
+    message: initialMessage,
+  };
 
-    // Validate personas structure
-    if (!personas.initiator || !personas.responder) {
-      return {
-        statusCode: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-        body: JSON.stringify({
-          message: "personas must contain both 'initiator' and 'responder'",
-        }),
-      };
-    }
+  // Create conversation with first message from initiator and personas
+  await createConversation(conversationId, personas, firstMessage);
 
-    // Generate UUID for new conversation
-    const conversationId = randomUUID();
-
-    // Create first message from initiator with initialMessage
-    const firstMessage = {
-      from: "initiator",
-      message: initialMessage,
-    };
-
-    // Create conversation with first message from initiator and personas
-    const params = {
-      TableName: tableName,
-      Item: {
-        "conversation-id": conversationId,
-        personas,
-        messages: [firstMessage],
-      },
-    };
-
-    await ddbDocClient.send(new PutCommand(params));
-
-    return {
-      statusCode: 201,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        conversationId: conversationId,
-      }),
-    };
-  } catch (error) {
-    console.error("Error:", error);
-    return {
-      statusCode: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        message: "Failed to create conversation",
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-    };
-  }
+  return {
+    statusCode: 201,
+    body: JSON.stringify({
+      conversationId: conversationId,
+    }),
+  };
 };
+
+export const handler = middy(baseHandler)
+  .use(zodValidator(CreateConversationEventSchema))
+  .use(httpResponseFormatter());

@@ -35,7 +35,7 @@ for dir in src/handlers/*/; do
   fi
 done
 
-# Setup each handler with utils and node_modules
+# Setup each handler with utils, middleware, schemas and node_modules
 for handler in "${handlers[@]}"; do
   if [ -d ".build/handlers/$handler" ]; then
     echo "Setting up $handler..."
@@ -44,6 +44,12 @@ for handler in "${handlers[@]}"; do
     if [ -d ".build/utils" ]; then
       echo "  Copying utils to $handler..."
       cp -r .build/utils .build/handlers/"$handler"/utils
+    fi
+    
+    # Copy middleware folder to each handler directory
+    if [ -d ".build/middleware" ]; then
+      echo "  Copying middleware to $handler..."
+      cp -r .build/middleware .build/handlers/"$handler"/middleware
     fi
     
     # Replace relative import paths in all compiled JS files
