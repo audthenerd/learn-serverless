@@ -35,9 +35,9 @@ Select the following options:
 - Template source: `AWS Quick Start Templates`
 - Application template: `Serverless API`
 - Runtime: `nodejs20.x` (or your preference)
-- Project name: `my-first-serverless-app`
-- X-Ray tracing: `N`
 - CloudWatch Application Insights: `N`
+- Structured Logging in JSON format: `N`
+- Project name: `my-first-serverless-app`
 
 Navigate into your project:
 
