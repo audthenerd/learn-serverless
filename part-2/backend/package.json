@@ -6,7 +6,10 @@
   "type": "module",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.398.0",
-    "@aws-sdk/lib-dynamodb": "^3.398.0"
+    "@aws-sdk/lib-dynamodb": "^3.398.0",
+    "@middy/core": "^6.4.5",
+    "@middy/http-error-handler": "^6.4.5",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
@@ -17,6 +20,7 @@
   "scripts": {
     "clean": "rm -rf .build && rm -rf .aws-sam",
     "build": "chmod +x build.sh && ./build.sh && sam build",
-    "deploy": "chmod +x deploy.sh && ./deploy.sh \"${npm_config_profile:-default}\""
+    "deploy": "chmod +x deploy.sh && ./deploy.sh \"${npm_config_profile:-default}\"",
+    "start:local": "sam local start-api --port 4000 --env-vars env.json"
   }
 }

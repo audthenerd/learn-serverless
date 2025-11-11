@@ -32,7 +32,7 @@ Resources:
       Runtime: nodejs22.x
       Architectures:
         - x86_64
-      MemorySize: 128
+      MemorySize: 256
       Timeout: 100
       Description: Get all conversation IDs from DynamoDB
       Policies:
@@ -58,7 +58,7 @@ Resources:
       Runtime: nodejs22.x
       Architectures:
         - x86_64
-      MemorySize: 128
+      MemorySize: 256
       Timeout: 100
       Description: Create a new conversation in DynamoDB
       Policies:
@@ -84,7 +84,7 @@ Resources:
       Runtime: nodejs22.x
       Architectures:
         - x86_64
-      MemorySize: 128
+      MemorySize: 256
       Timeout: 100
       Description: Get a specific conversation by ID from DynamoDB
       Policies:
@@ -126,33 +126,6 @@ Resources:
           Properties:
             RestApiId: !Ref ConversationApi
             Path: /generateResponse
-            Method: POST
-
-  # Summarize conversation
-  SummarizeFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: .build/handlers/summarize/
-      Handler: index.handler
-      Runtime: nodejs22.x
-      Architectures:
-        - x86_64
-      MemorySize: 256
-      Timeout: 300
-      Description: Summarize a conversation
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref ConversationTable
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref ConversationTable
-          AI_API_KEY: !Ref AiApiKey
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            RestApiId: !Ref ConversationApi
-            Path: /summarize
             Method: POST
   # Simple syntax to create a DynamoDB table with a single attribute primary key, more in
   # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlesssimpletable

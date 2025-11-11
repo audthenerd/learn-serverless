@@ -1,3 +1,11 @@
+// Get AI API key from environment
+const aiApiKey = process.env.AI_API_KEY || "";
+
+// Disable TLS verification for local development (SAM local)
+if (process.env.AWS_SAM_LOCAL) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+
 // Helper function to add random delay
 export async function randomDelay() {
   const delay = Math.floor(Math.random() * 500); // 0-500ms
@@ -7,7 +15,7 @@ export async function randomDelay() {
 // Helper function to call AI service with retry logic
 export async function callAI(
   messages: Array<{ role: string; content: string }>,
-  aiApiKey: string
+  correlationId?: string
 ) {
   const maxRetries = 10;
   let attempt = 0;
@@ -23,14 +31,25 @@ export async function callAI(
         temperature: 0.7,
       };
 
+      // Build headers - only include Authorization if API key is provided
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (aiApiKey) {
+        headers.Authorization = `Bearer ${aiApiKey}`;
+      }
+
+      // Add correlation ID for request tracing
+      if (correlationId) {
+        headers["X-Correlation-ID"] = correlationId;
+      }
+
       const aiResponse = await fetch(
         "https://4ebp5kndnp43j6uqz7y53u4dly0jwule.lambda-url.ap-southeast-1.on.aws/",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${aiApiKey}`,
-          },
+          headers,
           body: JSON.stringify(aiRequest),
         }
       );

@@ -6,6 +6,11 @@
   "headers": {
     "Content-Type": "application/json"
   },
-  "body": "{\"conversationId\":\"conv-123\",\"turn\":\"initiator\"}",
-  "isBase64Encoded": false
+  "body": "{\"conversationId\":\"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d\",\"turn\":\"responder\"}",
+  "isBase64Encoded": false,
+  "requestContext": {
+    "requestId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "accountId": "123456789012",
+    "stage": "test"
+  }
 }
