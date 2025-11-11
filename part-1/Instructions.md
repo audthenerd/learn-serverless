@@ -33,7 +33,7 @@ sam init
 
 Select the following options:
 - Template source: `AWS Quick Start Templates`
-- Application template: `Serverless API`
+- Application template: `Hello World Example`
 - Runtime: `nodejs20.x` (or your preference)
 - CloudWatch Application Insights: `N`
 - Structured Logging in JSON format: `N`
