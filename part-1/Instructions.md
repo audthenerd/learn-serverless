@@ -129,6 +129,16 @@ Use these settings:
 - SAM configuration file: `[Press Enter]`
 - SAM configuration environment: `[Press Enter]`
 
+You'll see a CloudFormation changeset showing resources to be created:
+- AWS::Lambda::Function
+- AWS::ApiGateway::RestApi
+- AWS::IAM::Role
+- AWS::Lambda::Permission
+- AWS::ApiGateway::Deployment
+- AWS::ApiGateway::Stage
+
+When prompted `Deploy this changeset? [y/N]:`, enter `y`
+
 Wait 2-3 minutes for deployment. Copy the API URL from the output:
 
 ```
