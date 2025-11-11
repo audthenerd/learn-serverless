@@ -6,11 +6,15 @@ import { createMessage } from "./utils/dataTransform";
 import { PERSONA_OPTIONS } from "./data/personas";
 
 function App() {
+  // Conversation limit
+  const MESSAGE_BATCH_SIZE = 10;
+
   // UI State
   const [messages, setMessages] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [useBackend, setUseBackend] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [currentLimit, setCurrentLimit] = useState(MESSAGE_BATCH_SIZE);
   const messagesEndRef = useRef(null);
 
   // Backend State
@@ -47,6 +51,13 @@ function App() {
 
     const timer = setInterval(() => {
       setMessages((prev) => {
+        // Check if reached current message limit
+        if (prev.length >= currentLimit) {
+          console.log(`⏸️ Reached conversation limit of ${currentLimit} messages. Pausing.`);
+          setIsPlaying(false);
+          return prev;
+        }
+        
         if (prev.length < conversation.length) {
           return [...prev, conversation[prev.length]];
         }
@@ -56,7 +67,7 @@ function App() {
     }, 2500);
 
     return () => clearInterval(timer);
-  }, [isPlaying, useBackend]);
+  }, [isPlaying, useBackend, currentLimit]);
 
   // Backend conversation playback
   useEffect(() => {
@@ -78,6 +89,13 @@ function App() {
   // Generate next AI message
   const generateNextMessage = async () => {
     if (loading) return;
+
+    // Check if reached current message limit
+    if (messages.length >= currentLimit) {
+      console.log(`⏸️ Reached conversation limit of ${currentLimit} messages. Pausing.`);
+      setIsPlaying(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -138,6 +156,7 @@ function App() {
       setLoading(true);
       setMessages([]);
       setDebateSummary(null);
+      setCurrentLimit(MESSAGE_BATCH_SIZE); // Reset limit for new debate
       console.log(`🎯 Starting debate with topic: "${topic}"`);
 
       // Get selected personas
@@ -223,12 +242,19 @@ function App() {
     setConversationId(null);
     setIsPlaying(false);
     setDebateSummary(null);
+    setCurrentLimit(MESSAGE_BATCH_SIZE); // Reset limit to initial batch size
     if (useBackend) {
       setTopic("");
     }
   };
 
   const togglePlayPause = () => {
+    // If resuming and already at the limit, increase the limit by another batch
+    if (!isPlaying && messages.length >= currentLimit) {
+      const newLimit = currentLimit + MESSAGE_BATCH_SIZE;
+      setCurrentLimit(newLimit);
+      console.log(`▶️ Resuming: Increasing limit to ${newLimit} messages`);
+    }
     setIsPlaying(!isPlaying);
   };
 
@@ -376,14 +402,19 @@ function App() {
         <button
           onClick={togglePlayPause}
           className="control-btn"
-          disabled={loading}
+          disabled={
+            loading ||
+            (useBackend && !conversationId) ||
+            (!useBackend && messages.length === 0) ||
+            (!isPlaying && messages.length >= currentLimit && messages.length >= conversation.length && !useBackend)
+          }
         >
           {isPlaying ? "⏸ Pause" : "▶ Resume"}
         </button>
         <button
           onClick={resetConversation}
           className="control-btn reset-btn"
-          disabled={loading}
+          disabled={loading || messages.length === 0}
         >
           🔄 Reset
         </button>
@@ -413,8 +444,8 @@ function App() {
 
       <div className="stats">
         <span>
-          Messages: {messages.length}{" "}
-          {!useBackend && `/ ${conversation.length}`}
+          Messages: {messages.length} / {currentLimit}{" "}
+          {messages.length >= currentLimit && "⏸️ (Limit Reached - Click Resume for +10)"}
           {useBackend &&
             conversationId &&
             ` | ID: ${conversationId.substring(0, 8)}...`}
