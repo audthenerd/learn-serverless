@@ -404,17 +404,23 @@ function App() {
           className="control-btn"
           disabled={
             loading ||
-            (useBackend && !conversationId) ||
-            (!useBackend && messages.length === 0) ||
-            (!isPlaying && messages.length >= currentLimit && messages.length >= conversation.length && !useBackend)
+            (useBackend && !conversationId)
           }
         >
-          {isPlaying ? "⏸ Pause" : "▶ Resume"}
+          {isPlaying 
+            ? "⏸ Pause" 
+            : (!useBackend && messages.length === 0) 
+              ? "▶ Start" 
+              : "▶ Resume"}
         </button>
         <button
           onClick={resetConversation}
           className="control-btn reset-btn"
-          disabled={loading || messages.length === 0}
+          disabled={
+            loading ||
+            (useBackend && messages.length === 0) ||
+            (!useBackend && messages.length === 0)
+          }
         >
           🔄 Reset
         </button>
