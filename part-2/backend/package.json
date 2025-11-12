@@ -20,7 +20,7 @@
   "scripts": {
     "clean": "rm -rf .build && rm -rf .aws-sam",
     "build": "chmod +x build.sh && ./build.sh && sam build",
-    "deploy": "chmod +x deploy.sh && ./deploy.sh \"${npm_config_profile:-default}\"",
+    "deploy": "sam deploy --profile \"${npm_config_profile:-default}\"",
     "start:local": "sam local start-api --port 4000 --env-vars env.json"
   }
 }

@@ -1,6 +1,3 @@
-// Get AI API key from environment
-const aiApiKey = process.env.AI_API_KEY || "";
-
 // Disable TLS verification for local development (SAM local)
 if (process.env.AWS_SAM_LOCAL) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -31,14 +28,10 @@ export async function callAI(
         temperature: 0.7,
       };
 
-      // Build headers - only include Authorization if API key is provided
+      // Build headers
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-
-      if (aiApiKey) {
-        headers.Authorization = `Bearer ${aiApiKey}`;
-      }
 
       // Add correlation ID for request tracing
       if (correlationId) {
