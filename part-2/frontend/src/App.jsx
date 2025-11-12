@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import "./App.css";
-import { conversation } from "./mock/conversationData";
-import api from "./services/api";
-import { createMessage } from "./utils/dataTransform";
-import { PERSONA_OPTIONS } from "./data/personas";
+import { useState, useEffect, useRef } from 'react';
+import './App.css';
+import { conversation } from './mock/conversationData';
+import api from './services/api';
+import { createMessage } from './utils/dataTransform';
+import { PERSONA_OPTIONS } from './data/personas';
 
 function App() {
   // Conversation limit
@@ -16,32 +16,33 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [currentLimit, setCurrentLimit] = useState(MESSAGE_BATCH_SIZE);
   const messagesEndRef = useRef(null);
+  const isGeneratingRef = useRef(false);
 
   // Backend State
   const [conversationId, setConversationId] = useState(null);
   const [apiReady, setApiReady] = useState(false);
 
   // Topic Input State
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState('');
   const [debateSummary, setDebateSummary] = useState(null);
 
   // Persona Selection State
-  const [aliceRole, setAliceRole] = useState("creative_solver"); // default
-  const [bobRole, setBobRole] = useState("technical_architect"); // default
+  const [aliceRole, setAliceRole] = useState('creative_solver'); // default
+  const [bobRole, setBobRole] = useState('technical_architect'); // default
 
   // Check if API is configured on mount
   useEffect(() => {
     const ready = api.isReady();
     setApiReady(ready);
     if (!ready) {
-      console.warn("⚠️ Backend mode disabled: API not configured");
-      console.log("💡 To enable backend mode:");
-      console.log("   1. Deploy your backend: cd backend && sam deploy");
-      console.log("   2. Copy the API Gateway URL from outputs");
-      console.log("   3. Update VITE_API_URL in .env file");
-      console.log("   4. Restart dev server: npm run dev");
+      console.warn('⚠️ Backend mode disabled: API not configured');
+      console.log('💡 To enable backend mode:');
+      console.log('   1. Deploy your backend: cd backend && sam deploy');
+      console.log('   2. Copy the API Gateway URL from outputs');
+      console.log('   3. Update VITE_API_URL in .env file');
+      console.log('   4. Restart dev server: npm run dev');
     } else {
-      console.log("✅ Backend API configured:", api.getBaseURL());
+      console.log('✅ Backend API configured:', api.getBaseURL());
     }
   }, []);
 
@@ -53,11 +54,13 @@ function App() {
       setMessages((prev) => {
         // Check if reached current message limit
         if (prev.length >= currentLimit) {
-          console.log(`⏸️ Reached conversation limit of ${currentLimit} messages. Pausing.`);
+          console.log(
+            `⏸️ Reached conversation limit of ${currentLimit} messages. Pausing.`
+          );
           setIsPlaying(false);
           return prev;
         }
-        
+
         if (prev.length < conversation.length) {
           return [...prev, conversation[prev.length]];
         }
@@ -73,9 +76,12 @@ function App() {
   useEffect(() => {
     if (!isPlaying || !useBackend || !conversationId) return;
 
+    // Use 5000ms for the first message, 3000ms for subsequent messages
+    const intervalTime = messages.length === 1 ? 5000 : 3000;
+
     const timer = setInterval(() => {
       generateNextMessage();
-    }, 3000);
+    }, intervalTime);
 
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,22 +89,25 @@ function App() {
 
   // Auto-scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   // Generate next AI message
   const generateNextMessage = async () => {
-    if (loading) return;
+    if (loading || isGeneratingRef.current) return;
 
     // Check if reached current message limit
     if (messages.length >= currentLimit) {
-      console.log(`⏸️ Reached conversation limit of ${currentLimit} messages. Pausing.`);
+      console.log(
+        `⏸️ Reached conversation limit of ${currentLimit} messages. Pausing.`
+      );
       setIsPlaying(false);
       return;
     }
 
     try {
       setLoading(true);
+      isGeneratingRef.current = true;
 
       // Determine whose turn it is
       // If no messages yet, it's the responder's turn (since initiator created the conversation)
@@ -109,16 +118,16 @@ function App() {
 
       if (!lastMessage) {
         // First response after creation
-        turn = "responder";
-        botName = "bob";
+        turn = 'responder';
+        botName = 'bob';
       } else {
         // Alternate turns
-        if (lastMessage.bot === "alice") {
-          turn = "responder";
-          botName = "bob";
+        if (lastMessage.bot === 'alice') {
+          turn = 'responder';
+          botName = 'bob';
         } else {
-          turn = "initiator";
-          botName = "alice";
+          turn = 'initiator';
+          botName = 'alice';
         }
       }
 
@@ -130,25 +139,26 @@ function App() {
       // Response format: { from: 'initiator' | 'responder', message: string }
       // Transform to frontend format
       const transformedMessage = createMessage(
-        turn === "initiator" ? "alice" : "bob",
+        turn === 'initiator' ? 'alice' : 'bob',
         response.message
       );
 
       setMessages((prev) => [...prev, transformedMessage]);
 
-      console.log("✅ Message generated:", transformedMessage);
+      console.log('✅ Message generated:', transformedMessage);
     } catch (error) {
-      console.error("❌ Failed to generate message:", error);
+      console.error('❌ Failed to generate message:', error);
       setIsPlaying(false); // Stop on error
     } finally {
       setLoading(false);
+      isGeneratingRef.current = false;
     }
   };
 
   // Start a debate with a custom topic
   const startDebateWithTopic = async () => {
     if (!topic.trim()) {
-      alert("Please enter a debate topic");
+      alert('Please enter a debate topic');
       return;
     }
 
@@ -181,17 +191,17 @@ function App() {
       const response = await api.createConversation(topic, personas);
       setConversationId(response.conversationId);
 
-      console.log("✅ Debate conversation created:", response.conversationId);
+      console.log('✅ Debate conversation created:', response.conversationId);
 
       // Add the initial message (topic from Alice/initiator)
-      const initialMessage = createMessage("alice", topic);
+      const initialMessage = createMessage('alice', topic);
       setMessages([initialMessage]);
 
       // Start generating debate responses (Bob will respond first)
       setIsPlaying(true);
     } catch (error) {
-      console.error("❌ Failed to start debate:", error);
-      alert("Failed to start debate. Check console for details.");
+      console.error('❌ Failed to start debate:', error);
+      alert('Failed to start debate. Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -200,21 +210,21 @@ function App() {
   // Summarize the current debate
   const summarizeDebate = async () => {
     if (!conversationId) {
-      console.warn("⚠️ No conversation to summarize");
+      console.warn('⚠️ No conversation to summarize');
       return;
     }
 
     try {
       setLoading(true);
-      console.log("📝 Summarizing debate...");
+      console.log('📝 Summarizing debate...');
 
       const response = await api.summarize(conversationId);
       setDebateSummary(response.summary || response);
 
-      console.log("✅ Debate summarized:", response);
+      console.log('✅ Debate summarized:', response);
     } catch (error) {
-      console.error("❌ Failed to summarize debate:", error);
-      alert("Failed to summarize debate. Check console for details.");
+      console.error('❌ Failed to summarize debate:', error);
+      alert('Failed to summarize debate. Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -229,7 +239,7 @@ function App() {
     if (!newMode) {
       // Switching to mock mode
       resetConversation();
-      setTopic("");
+      setTopic('');
       setDebateSummary(null);
     } else {
       // Switching to backend mode
@@ -243,8 +253,9 @@ function App() {
     setIsPlaying(false);
     setDebateSummary(null);
     setCurrentLimit(MESSAGE_BATCH_SIZE); // Reset limit to initial batch size
+    isGeneratingRef.current = false; // Reset generation flag
     if (useBackend) {
-      setTopic("");
+      setTopic('');
     }
   };
 
@@ -267,11 +278,11 @@ function App() {
         <div className="mode-toggle">
           <button
             onClick={toggleBackendMode}
-            className={`mode-btn ${useBackend ? "backend-mode" : "mock-mode"}`}
+            className={`mode-btn ${useBackend ? 'backend-mode' : 'mock-mode'}`}
             disabled={loading}
           >
-            {useBackend ? "🌐 Backend Mode" : "🎭 Mock Mode"}
-            {!apiReady && " (Backend Not Configured)"}
+            {useBackend ? '🌐 Backend Mode' : '🎭 Mock Mode'}
+            {!apiReady && ' (Backend Not Configured)'}
           </button>
         </div>
       </header>
@@ -329,7 +340,7 @@ function App() {
               placeholder="e.g., Should AI replace human developers?"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && startDebateWithTopic()}
+              onKeyPress={(e) => e.key === 'Enter' && startDebateWithTopic()}
               disabled={loading}
               autoFocus
             />
@@ -338,7 +349,7 @@ function App() {
               className="start-debate-btn"
               disabled={loading || !topic.trim()}
             >
-              {loading ? "⏳ Starting..." : "🚀 Start Debate"}
+              {loading ? '⏳ Starting...' : '🚀 Start Debate'}
             </button>
           </div>
           {!apiReady && (
@@ -356,7 +367,7 @@ function App() {
             <h3>Alice</h3>
             <p>
               {PERSONA_OPTIONS.find((p) => p.value === aliceRole)?.label ||
-                "Creative Problem Solver"}
+                'Creative Problem Solver'}
             </p>
           </div>
         </div>
@@ -367,7 +378,7 @@ function App() {
             <h3>Bob</h3>
             <p>
               {PERSONA_OPTIONS.find((p) => p.value === bobRole)?.label ||
-                "Technical Architect"}
+                'Technical Architect'}
             </p>
           </div>
         </div>
@@ -377,11 +388,11 @@ function App() {
         {messages.map((msg, index) => (
           <div key={index} className={`message ${msg.bot}-message`}>
             <div className="message-avatar">
-              {msg.bot === "alice" ? "A" : "B"}
+              {msg.bot === 'alice' ? 'A' : 'B'}
             </div>
             <div className="message-content">
               <div className="message-header">
-                {msg.bot === "alice" ? "Alice" : "Bob"}
+                {msg.bot === 'alice' ? 'Alice' : 'Bob'}
               </div>
               <div className="message-text">{msg.text}</div>
             </div>
@@ -402,16 +413,13 @@ function App() {
         <button
           onClick={togglePlayPause}
           className="control-btn"
-          disabled={
-            loading ||
-            (useBackend && !conversationId)
-          }
+          disabled={loading || (useBackend && !conversationId)}
         >
-          {isPlaying 
-            ? "⏸ Pause" 
-            : (!useBackend && messages.length === 0) 
-              ? "▶ Start" 
-              : "▶ Resume"}
+          {isPlaying
+            ? '⏸ Pause'
+            : !useBackend && messages.length === 0
+            ? '▶ Start'
+            : '▶ Resume'}
         </button>
         <button
           onClick={resetConversation}
@@ -441,7 +449,7 @@ function App() {
         <div className="summary-container">
           <h3>📝 Debate Summary</h3>
           <div className="summary-content">
-            {typeof debateSummary === "string"
+            {typeof debateSummary === 'string'
               ? debateSummary
               : JSON.stringify(debateSummary, null, 2)}
           </div>
@@ -450,8 +458,9 @@ function App() {
 
       <div className="stats">
         <span>
-          Messages: {messages.length} / {currentLimit}{" "}
-          {messages.length >= currentLimit && "⏸️ (Limit Reached - Click Resume for +10)"}
+          Messages: {messages.length} / {currentLimit}{' '}
+          {messages.length >= currentLimit &&
+            '⏸️ (Limit Reached - Click Resume for +10)'}
           {useBackend &&
             conversationId &&
             ` | ID: ${conversationId.substring(0, 8)}...`}
