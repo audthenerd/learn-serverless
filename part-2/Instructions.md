@@ -175,7 +175,6 @@ SummarizeFunction:
     Environment:
       Variables:
         TABLE_NAME: !Ref ConversationTable
-        AI_API_KEY: !Ref AiApiKey
     Events:
       Api:
         Type: Api
